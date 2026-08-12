@@ -1,0 +1,15 @@
+topic: "Should nuclear power be the primary solution to climate change?"
+rounds: 2
+max_tokens: 250
+
+agents:
+  - name: agent_a
+    model: gemini/gemini-1.5-flash
+  - name: agent_b
+    model: gemini/gemini-1.5-flash
+  - name: agent_c
+    model: gemini/gemini-1.5-flash
+
+orchestrator:
+  mode: llm
+  model: gemini/gemini-1.5-flash
