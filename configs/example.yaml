@@ -4,12 +4,12 @@ max_tokens: 250
 
 agents:
   - name: agent_a
-    model: gemini/gemini-1.5-flash
+    model: gemini/gemini-flash-lite-latest
   - name: agent_b
-    model: gemini/gemini-1.5-flash
+    model: gemini/gemini-flash-lite-latest
   - name: agent_c
-    model: gemini/gemini-1.5-flash
+    model: gemini/gemini-flash-lite-latest
 
 orchestrator:
   mode: llm
-  model: gemini/gemini-1.5-flash
+  model: gemini/gemini-flash-lite-latest
