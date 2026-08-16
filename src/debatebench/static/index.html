@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DebateBench</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #fff;
+    --line: #e3e5e9;
+    --text: #14161a;
+    --dim: #666b73;
+    --accent: #2563eb;
+    --win: #15803d;
+    --win-bg: #eefbf2;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 20px 60px;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text); background: var(--bg);
+  }
+  .wrap { max-width: 940px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--dim); margin: 0 0 24px; font-size: 14px; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px; margin-bottom: 18px;
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 180px; min-width: 0; }
+  .field.grow { flex: 3 1 320px; }
+  label { font-size: 12px; color: var(--dim); font-weight: 600; }
+  input, select {
+    font: inherit; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 7px; background: #fff; color: var(--text); min-width: 0;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+
+  .agent { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+  .agent input:first-child { flex: 1 1 150px; }
+  .agent input:nth-child(2) { flex: 2 1 260px; }
+
+  button {
+    font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 7px;
+    border: 1px solid transparent; background: var(--accent); color: #fff; cursor: pointer;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.08); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: #fff; border-color: var(--line); color: var(--text); font-weight: 500; }
+  button.link { background: none; border: none; color: var(--accent); padding: 4px 6px; font-weight: 500; }
+
+  .status { margin-left: 12px; color: var(--dim); font-size: 14px; }
+  .err { color: #b91c1c; }
+
+  .round-head {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 26px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  .round-head h2 { font-size: 15px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
+  .round-head .note { color: var(--dim); font-size: 13px; }
+
+  .cards { display: grid; gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--card); }
+  .card.pickable { cursor: pointer; }
+  .card.pickable:hover { border-color: var(--accent); }
+  .card.won { border-color: var(--win); background: var(--win-bg); }
+  .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .code { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--win); }
+  .card p { margin: 0; white-space: pre-wrap; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+  td.n { font-family: var(--mono); }
+
+  .hint { color: var(--dim); font-size: 13px; margin: 8px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DebateBench</h1>
+  <p class="sub">Anonymised agents debate a topic. Each round they get fresh codes, so the judge can never track who is who.</p>
+
+  <div class="panel" id="setup">
+    <div class="row">
+      <div class="field grow">
+        <label for="topic">Topic</label>
+        <input id="topic" value="Should nuclear power be the primary solution to climate change?" />
+      </div>
+      <div class="field" style="flex:0 0 110px">
+        <label for="rounds">Rounds</label>
+        <input id="rounds" type="number" min="1" max="20" value="2" />
+      </div>
+      <div class="field" style="flex:0 0 130px">
+        <label for="maxtok">Max tokens</label>
+        <input id="maxtok" type="number" min="50" max="4000" value="250" />
+      </div>
+    </div>
+
+    <label style="display:block;margin-bottom:6px">Agents</label>
+    <div id="agents"></div>
+    <button class="link" id="add" type="button">+ add agent</button>
+
+    <div class="row" style="margin-top:14px">
+      <div class="field" style="flex:0 0 170px">
+        <label for="mode">Judged by</label>
+        <select id="mode">
+          <option value="llm">An LLM</option>
+          <option value="human">Me</option>
+        </select>
+      </div>
+      <div class="field grow" id="judge-model-field">
+        <label for="judge">Judge model</label>
+        <input id="judge" value="gemini/gemini-flash-lite-latest" />
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;margin-top:6px">
+      <button id="run" type="button">Run debate</button>
+      <span class="status" id="status"></span>
+    </div>
+    <p class="hint">Needs API keys in <code>.env</code> for whichever provider the models point at. Ollama models run locally.</p>
+  </div>
+
+  <div id="transcript"></div>
+
+  <div class="panel" id="results" hidden>
+    <h2 style="font-size:16px;margin:0 0 4px">Final standings</h2>
+    <p class="sub" style="margin-bottom:14px">Names are revealed only now the debate is over.</p>
+    <table><thead><tr><th>Agent</th><th>Rounds won</th></tr></thead><tbody id="standings"></tbody></table>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var agentsEl = $("agents"), transcript = $("transcript"), statusEl = $("status");
+  var source = null, awaitingRound = null;
+
+  var DEFAULT_MODEL = "gemini/gemini-flash-lite-latest";
+
+  function addAgent(name, model) {
+    var row = document.createElement("div");
+    row.className = "agent";
+    var n = document.createElement("input");
+    n.placeholder = "name"; n.value = name || ("agent_" + String.fromCharCode(97 + agentsEl.children.length));
+    var m = document.createElement("input");
+    m.placeholder = "litellm model string"; m.value = model || DEFAULT_MODEL;
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "link"; x.textContent = "remove";
+    x.onclick = function () {
+      if (agentsEl.children.length > 2) row.remove();
+      else say("A debate needs at least two agents.", true);
+    };
+    row.append(n, m, x);
+    agentsEl.appendChild(row);
+  }
+
+  function readAgents() {
+    return [].map.call(agentsEl.children, function (row) {
+      var i = row.querySelectorAll("input");
+      return { name: i[0].value.trim(), model: i[1].value.trim() };
+    }).filter(function (a) { return a.name && a.model; });
+  }
+
+  function say(msg, isErr) {
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (isErr ? " err" : "");
+  }
+
+  $("add").onclick = function () { addAgent(); };
+  $("mode").onchange = function () {
+    $("judge-model-field").hidden = this.value === "human";
+  };
+
+  /* Prefill from a config passed on the command line, if there was one. */
+  fetch("/api/preset").then(function (r) { return r.json(); }).then(function (p) {
+    if (p && p.topic) {
+      $("topic").value = p.topic;
+      $("rounds").value = p.rounds;
+      $("maxtok").value = p.max_tokens;
+      agentsEl.innerHTML = "";
+      p.agents.forEach(function (a) { addAgent(a.name, a.model); });
+      $("mode").value = p.orchestrator.mode;
+      if (p.orchestrator.model) $("judge").value = p.orchestrator.model;
+      $("mode").onchange.call($("mode"));
+    }
+  }).catch(function () {});
+
+  if (!agentsEl.children.length) { addAgent(); addAgent(); addAgent(); }
+
+  function roundBlock(n) {
+    var id = "round-" + n;
+    if ($(id)) return $(id);
+    var head = document.createElement("div");
+    head.className = "round-head";
+    head.innerHTML = '<h2>Round ' + n + '</h2><span class="note" id="note-' + n + '">agents are answering…</span>';
+    var cards = document.createElement("div");
+    cards.className = "cards"; cards.id = id;
+    transcript.append(head, cards);
+    return cards;
+  }
+
+  function handle(ev) {
+    if (ev.type === "start") {
+      transcript.innerHTML = "";
+      $("results").hidden = true;
+      say("running · " + ev.agents.length + " agents · " + ev.rounds + " rounds");
+    }
+    else if (ev.type === "round_start") { roundBlock(ev.round); }
+    else if (ev.type === "agent_done") {
+      var note = $("note-" + ev.round);
+      if (note) note.textContent = "answering… " + ev.done + " of " + ev.total;
+    }
+    else if (ev.type === "responses") {
+      var box = roundBlock(ev.round);
+      box.innerHTML = "";
+      Object.keys(ev.responses).forEach(function (code) {
+        var c = document.createElement("div");
+        c.className = "card"; c.dataset.code = code; c.dataset.round = ev.round;
+        c.innerHTML = '<div class="card-top"><span class="code"></span></div><p></p>';
+        c.querySelector(".code").textContent = code;
+        c.querySelector("p").textContent = ev.responses[code];
+        box.appendChild(c);
+      });
+      var note = $("note-" + ev.round);
+      if (note) note.textContent = "judging…";
+    }
+    else if (ev.type === "awaiting") {
+      awaitingRound = ev.round;
+      var note = $("note-" + ev.round);
+      if (note) note.textContent = "your turn — click the argument that wins";
+      [].forEach.call(document.querySelectorAll('#round-' + ev.round + ' .card'), function (c) {
+        c.classList.add("pickable");
+        c.onclick = function () { pick(c.dataset.code, ev.round); };
+      });
+    }
+    else if (ev.type === "winner") {
+      var card = document.querySelector('#round-' + ev.round + ' .card[data-code="' + ev.code + '"]');
+      if (card) {
+        card.classList.add("won");
+        card.querySelector(".card-top").insertAdjacentHTML("beforeend", '<span class="tag">winner</span>');
+      }
+      [].forEach.call(document.querySelectorAll('#round-' + ev.round + ' .card'), function (c) {
+        c.classList.remove("pickable"); c.onclick = null;
+      });
+      var note = $("note-" + ev.round);
+      if (note) note.textContent = "winner carries forward as the next round's context";
+    }
+    else if (ev.type === "done") {
+      var body = $("standings");
+      body.innerHTML = "";
+      Object.keys(ev.stats).sort(function (a, b) { return ev.stats[b] - ev.stats[a]; })
+        .forEach(function (name) {
+          var tr = document.createElement("tr");
+          var td1 = document.createElement("td"); td1.textContent = name;
+          var td2 = document.createElement("td"); td2.className = "n"; td2.textContent = ev.stats[name];
+          tr.append(td1, td2); body.appendChild(tr);
+        });
+      $("results").hidden = false;
+      say("done");
+    }
+    else if (ev.type === "error") { say(ev.message, true); }
+  }
+
+  function pick(code, round) {
+    if (awaitingRound !== round) return;
+    awaitingRound = null;
+    fetch("/api/pick", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code })
+    });
+  }
+
+  $("run").onclick = function () {
+    var agents = readAgents();
+    if (agents.length < 2) { say("A debate needs at least two agents.", true); return; }
+
+    var body = {
+      topic: $("topic").value.trim(),
+      rounds: +$("rounds").value,
+      max_tokens: +$("maxtok").value,
+      agents: agents,
+      orchestrator: $("mode").value === "llm"
+        ? { mode: "llm", model: $("judge").value.trim() }
+        : { mode: "human" }
+    };
+
+    $("run").disabled = true;
+    say("starting…");
+    transcript.innerHTML = "";
+    $("results").hidden = true;
+
+    /* Open the stream first so no early event is missed. */
+    if (source) source.close();
+    source = new EventSource("/api/events");
+    source.onmessage = function (m) { handle(JSON.parse(m.data)); };
+    source.addEventListener("end", function () {
+      source.close(); source = null; $("run").disabled = false;
+    });
+    source.onerror = function () {
+      if (source && source.readyState === 2) { $("run").disabled = false; }
+    };
+
+    fetch("/api/run", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          say(res.j.error || "could not start", true);
+          $("run").disabled = false;
+          if (source) { source.close(); source = null; }
+        }
+      })
+      .catch(function (e) {
+        say(String(e), true); $("run").disabled = false;
+      });
+  };
+})();
+</script>
+</body>
+</html>
