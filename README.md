@@ -50,9 +50,28 @@ Choosing `Judged by: Me` puts you in the orchestrator's seat. The run
 pauses each round and you click the argument that wins, rather than typing
 a code at a prompt.
 
+The page is one viewport with no scrolling: the pipeline diagram on the
+left, the arguments on the right, standings along the bottom. Only the
+argument column scrolls, and it scrolls itself, so a fullscreen screen
+recording never has to move.
+
 The server is standard library only, so nothing is added to the dependency
 set for it. Progress reaches the page over Server-Sent Events, and it binds
 to `127.0.0.1` — a local tool, not something to expose.
+
+## Deploying the replay
+
+`vercel.json` publishes `src/debatebench/static` as a static site. With no
+backend to answer `/api/preset`, the page falls back to replaying
+`replay.json`, a real run recorded through the same pipeline. Nothing is
+called and no key is needed, which is the point: the live server is not
+deployable anyway, since a debate takes minutes of model calls, holds run
+state in memory between requests, and streams over a long-lived connection
+— none of which survive a serverless function. Publishing it with real keys
+would also let anyone spend them.
+
+To record a different run, capture the events from `run_debate`'s
+`on_event` hook and write them out as `[{"ev": <event>, "wait": <ms>}, ...]`.
 
 ## Docker
 

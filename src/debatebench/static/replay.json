@@ -1,0 +1,187 @@
+[
+ {
+  "ev": {
+   "type": "start",
+   "topic": "Should nuclear power be the primary solution to climate change?",
+   "rounds": 3,
+   "agents": [
+    "gemini-flash",
+    "gpt-4o-mini",
+    "claude-haiku"
+   ],
+   "mode": "llm"
+  },
+  "wait": 900
+ },
+ {
+  "ev": {
+   "type": "round_start",
+   "round": 1
+  },
+  "wait": 700
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 1,
+   "done": 1,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 1,
+   "done": 2,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 1,
+   "done": 3,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "responses",
+   "round": 1,
+   "responses": {
+    "Agent-E476": "Nuclear gives the highest energy density per unit of land of any firm source, and its lifecycle carbon is on par with wind. Grids that decarbonised fastest \u2014 France, Sweden, Ontario \u2014 did it with nuclear, not without it.",
+    "Agent-32M2": "Cost and schedule are the binding constraints, not physics. Recent Western builds ran a decade late at triple budget, while solar plus storage now deploys in under two years per gigawatt.",
+    "Agent-0ACP": "Framing it as primary versus not is the error. Nuclear is the right instrument for firm baseload; renewables are the right instrument for the cheap marginal megawatt. The mix is the answer."
+   }
+  },
+  "wait": 1400
+ },
+ {
+  "ev": {
+   "type": "winner",
+   "round": 1,
+   "code": "Agent-0ACP"
+  },
+  "wait": 2600
+ },
+ {
+  "ev": {
+   "type": "round_start",
+   "round": 2
+  },
+  "wait": 700
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 2,
+   "done": 1,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 2,
+   "done": 2,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 2,
+   "done": 3,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "responses",
+   "round": 2,
+   "responses": {
+    "Agent-Q1PB": "On cost: the overruns are first-of-a-kind effects. Where a design is built repeatedly \u2014 South Korea's APR1400 \u2014 costs fell with each unit. That is a learning curve, not a ceiling.",
+    "Agent-APF0": "A learning curve you only reach after a dozen builds is cold comfort against a 2035 deadline. Capital spent on nuclear today displaces capacity that could be generating in eighteen months.",
+    "Agent-G815": "Both of those are right, which is the point. Use nuclear where storage cannot yet cover multi-day lulls, and use renewables everywhere the economics already win. Sequencing beats picking a side."
+   }
+  },
+  "wait": 1400
+ },
+ {
+  "ev": {
+   "type": "winner",
+   "round": 2,
+   "code": "Agent-G815"
+  },
+  "wait": 2600
+ },
+ {
+  "ev": {
+   "type": "round_start",
+   "round": 3
+  },
+  "wait": 700
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 3,
+   "done": 1,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 3,
+   "done": 2,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "agent_done",
+   "round": 3,
+   "done": 3,
+   "total": 3
+  },
+  "wait": 1100
+ },
+ {
+  "ev": {
+   "type": "responses",
+   "round": 3,
+   "responses": {
+    "Agent-FWHQ": "Multi-day lulls are exactly where batteries fail hardest, and that is the gap nuclear fills. No amount of overbuilding solar solves a still, dark week in January.",
+    "Agent-80BA": "Interconnection and demand response solve that gap more cheaply than a reactor does. The wind is always blowing somewhere on a continental grid.",
+    "Agent-LLD6": "Continental interconnection assumes political co-operation that has repeatedly failed under stress. A portfolio with firm domestic capacity is the resilient choice, and nuclear is what that looks like."
+   }
+  },
+  "wait": 1400
+ },
+ {
+  "ev": {
+   "type": "winner",
+   "round": 3,
+   "code": "Agent-LLD6"
+  },
+  "wait": 2600
+ },
+ {
+  "ev": {
+   "type": "done",
+   "stats": {
+    "claude-haiku": 3
+   }
+  },
+  "wait": 0
+ }
+]

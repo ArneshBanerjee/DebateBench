@@ -5,135 +5,220 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DebateBench</title>
 <style>
+  /* The whole app is one viewport with no page scroll, so a fullscreen
+     screen recording never has to move. Only the transcript column scrolls,
+     and it scrolls itself. */
   :root {
-    --bg: #f6f7f9;
-    --card: #fff;
-    --line: #e3e5e9;
-    --text: #14161a;
-    --dim: #666b73;
-    --accent: #2563eb;
-    --win: #15803d;
-    --win-bg: #eefbf2;
+    --bg: #0f1115;
+    --panel: #161920;
+    --panel-2: #1c2029;
+    --line: #272c37;
+    --text: #e8eaf0;
+    --dim: #949bab;
+    --faint: #6b7280;
+    --accent: #4f8cff;
+    --win: #34d399;
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
   body {
-    margin: 0; padding: 28px 20px 60px;
-    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     color: var(--text); background: var(--bg);
+    display: grid; grid-template-rows: auto 1fr auto; height: 100vh;
   }
-  .wrap { max-width: 940px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
-  .sub { color: var(--dim); margin: 0 0 24px; font-size: 14px; }
 
-  .panel {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 10px; padding: 18px; margin-bottom: 18px;
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
   }
-  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-  .field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 180px; min-width: 0; }
-  .field.grow { flex: 3 1 320px; }
-  label { font-size: 12px; color: var(--dim); font-weight: 600; }
-  input, select {
-    font: inherit; padding: 8px 10px; border: 1px solid var(--line);
-    border-radius: 7px; background: #fff; color: var(--text); min-width: 0;
+  .brand { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px;
   }
-  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
-
-  .agent { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
-  .agent input:first-child { flex: 1 1 150px; }
-  .agent input:nth-child(2) { flex: 2 1 260px; }
+  header .spacer { flex: 1 1 auto; min-width: 0; }
+  .topic-line {
+    color: var(--dim); font-size: 14px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .status { color: var(--dim); font-size: 13px; white-space: nowrap; }
+  .status.err { color: #f87171; }
 
   button {
-    font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 7px;
+    font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 7px;
     border: 1px solid transparent; background: var(--accent); color: #fff; cursor: pointer;
+    white-space: nowrap;
   }
-  button:hover:not(:disabled) { filter: brightness(1.08); }
-  button:disabled { opacity: .5; cursor: default; }
-  button.ghost { background: #fff; border-color: var(--line); color: var(--text); font-weight: 500; }
-  button.link { background: none; border: none; color: var(--accent); padding: 4px 6px; font-weight: 500; }
+  button:hover:not(:disabled) { filter: brightness(1.1); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: transparent; border-color: var(--line); color: var(--text); font-weight: 500; }
 
-  .status { margin-left: 12px; color: var(--dim); font-size: 14px; }
-  .err { color: #b91c1c; }
+  /* ---------- setup sheet ---------- */
+  .sheet {
+    position: absolute; inset: 0; background: rgba(8,10,14,.72);
+    display: flex; align-items: center; justify-content: center; z-index: 20; padding: 20px;
+  }
+  .sheet[hidden] { display: none; }
+  .sheet-inner {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; width: min(680px, 100%); max-height: 88vh; overflow: auto;
+  }
+  .sheet h2 { margin: 0 0 14px; font-size: 16px; }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; min-width: 0; }
+  label { font-size: 11px; color: var(--dim); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+  input, select {
+    font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--panel-2); color: var(--text); min-width: 0;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .agent-row { display: flex; gap: 8px; margin-bottom: 7px; }
+  .agent-row input:first-child { flex: 1 1 130px; }
+  .agent-row input:nth-child(2) { flex: 2 1 240px; }
+  .linkbtn { background: none; border: none; color: var(--accent); padding: 4px 6px; font-weight: 500; font-size: 13px; }
+  .note { color: var(--faint); font-size: 12px; margin: 10px 0 0; }
 
-  .round-head {
+  /* ---------- main split ---------- */
+  main { display: grid; grid-template-columns: minmax(400px, 42%) 1fr; min-height: 0; }
+  .pane { min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+  .pane + .pane { border-left: 1px solid var(--line); }
+  .pane-head {
+    padding: 9px 18px; border-bottom: 1px solid var(--line);
+    font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--dim);
     display: flex; align-items: baseline; gap: 10px;
-    margin: 26px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
   }
-  .round-head h2 { font-size: 15px; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
-  .round-head .note { color: var(--dim); font-size: 13px; }
+  .pane-head .sub { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12px; color: var(--faint); }
 
-  .cards { display: grid; gap: 10px; }
-  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--card); }
-  .card.pickable { cursor: pointer; }
-  .card.pickable:hover { border-color: var(--accent); }
-  .card.won { border-color: var(--win); background: var(--win-bg); }
-  .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .code { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .02em; }
-  .tag { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--win); }
-  .card p { margin: 0; white-space: pre-wrap; }
+  /* ---------- architecture diagram ---------- */
+  .diagram { flex: 1 1 auto; min-height: 0; padding: 10px 14px 14px; display: flex; }
+  .diagram svg { width: 100%; height: 100%; display: block; }
+  .nd-box { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.5; }
+  .nd-label { fill: var(--text); font-size: 13px; font-weight: 600; }
+  .nd-sub { fill: var(--faint); font-size: 11px; }
+  .chip { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.5; transition: all .3s ease; }
+  .chip-t { fill: var(--dim); font-size: 12px; font-family: var(--mono); transition: fill .3s ease; }
+  .wire { stroke: var(--line); stroke-width: 1.5; fill: none; transition: stroke .3s ease; }
+  .zone { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+  .zone-t { fill: var(--faint); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; }
 
-  table { border-collapse: collapse; width: 100%; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-  th { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
-  td.n { font-family: var(--mono); }
+  /* live states */
+  .g-agent.thinking .nd-box { stroke: var(--accent); }
+  .g-agent.thinking .dotpulse { opacity: 1; }
+  .dotpulse { opacity: 0; }
+  .g-slot.coded .chip { stroke: var(--accent); fill: rgba(79,140,255,.12); }
+  .g-slot.coded .chip-t { fill: var(--accent); }
+  .g-slot.won .chip { stroke: var(--win); fill: rgba(52,211,153,.16); }
+  .g-slot.won .chip-t { fill: var(--win); }
+  .g-slot.won .wire { stroke: var(--win); stroke-width: 2.5; }
+  .judge.active .nd-box { stroke: var(--accent); }
+  .judge.decided .nd-box { stroke: var(--win); }
+  .feedback { opacity: 0; transition: opacity .4s ease; }
+  .feedback.on { opacity: 1; }
+  .feedback path { stroke: var(--win); stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+  .feedback text { fill: var(--win); font-size: 11px; }
 
-  .hint { color: var(--dim); font-size: 13px; margin: 8px 0 0; }
+  /* ---------- transcript ---------- */
+  .feed { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; scroll-behavior: smooth; }
+  .round-tag {
+    display: flex; align-items: baseline; gap: 10px; margin: 16px 0 9px;
+    font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--dim);
+  }
+  .round-tag:first-child { margin-top: 0; }
+  .round-tag .n { color: var(--faint); font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12px; }
+  .arg {
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+    margin-bottom: 8px; background: var(--panel); transition: border-color .25s ease, background .25s ease;
+  }
+  .arg.pickable { cursor: pointer; }
+  .arg.pickable:hover { border-color: var(--accent); }
+  .arg.won { border-color: var(--win); background: rgba(52,211,153,.07); }
+  .arg-top { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .arg-code { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--dim); }
+  .arg.won .arg-code { color: var(--win); }
+  .arg-win { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--win); }
+  .arg p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text); }
+  .empty { color: var(--faint); font-size: 14px; padding: 22px 0; }
+
+  /* ---------- standings strip ---------- */
+  footer {
+    border-top: 1px solid var(--line); background: var(--panel);
+    padding: 10px 20px; display: flex; align-items: center; gap: 18px; min-height: 52px;
+  }
+  .foot-label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); }
+  .standings { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .stand {
+    display: flex; align-items: baseline; gap: 7px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 11px;
+  }
+  .stand .nm { font-size: 13px; font-weight: 600; }
+  .stand .ct { font-family: var(--mono); font-size: 13px; color: var(--win); }
+  .stand.lead { border-color: var(--win); }
+  .locked { color: var(--faint); font-size: 13px; }
   [hidden] { display: none !important; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 38%) 1fr; }
+    .pane + .pane { border-left: none; border-top: 1px solid var(--line); }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>DebateBench</h1>
-  <p class="sub">Anonymised agents debate a topic. Each round they get fresh codes, so the judge can never track who is who.</p>
 
-  <div class="panel" id="setup">
+<header>
+  <div class="brand">Debate<span>Bench</span></div>
+  <div class="badge" id="mode-badge" hidden>replay</div>
+  <div class="spacer"><div class="topic-line" id="topic-line">No debate running</div></div>
+  <div class="status" id="status"></div>
+  <button class="ghost" id="setup-btn" type="button">Setup</button>
+  <button id="run" type="button">Run debate</button>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head">Pipeline <span class="sub" id="stage-sub">idle</span></div>
+    <div class="diagram"><svg id="diagram" viewBox="0 0 640 430" preserveAspectRatio="xMidYMid meet"></svg></div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head">Arguments <span class="sub" id="feed-sub">anonymous until the debate ends</span></div>
+    <div class="feed" id="feed"><p class="empty">Run a debate to see each round appear here.</p></div>
+  </section>
+</main>
+
+<footer>
+  <span class="foot-label">Standings</span>
+  <div class="standings" id="standings"><span class="locked">Hidden until the debate ends — the judge never sees them either.</span></div>
+</footer>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <h2>Debate setup</h2>
     <div class="row">
-      <div class="field grow">
+      <div class="field" style="flex:3 1 340px">
         <label for="topic">Topic</label>
         <input id="topic" value="Should nuclear power be the primary solution to climate change?" />
       </div>
-      <div class="field" style="flex:0 0 110px">
-        <label for="rounds">Rounds</label>
-        <input id="rounds" type="number" min="1" max="20" value="2" />
-      </div>
-      <div class="field" style="flex:0 0 130px">
-        <label for="maxtok">Max tokens</label>
-        <input id="maxtok" type="number" min="50" max="4000" value="250" />
-      </div>
+      <div class="field" style="flex:0 0 90px"><label for="rounds">Rounds</label><input id="rounds" type="number" min="1" max="20" value="3" /></div>
+      <div class="field" style="flex:0 0 110px"><label for="maxtok">Max tokens</label><input id="maxtok" type="number" min="50" max="4000" value="220" /></div>
     </div>
-
-    <label style="display:block;margin-bottom:6px">Agents</label>
+    <label>Agents</label>
     <div id="agents"></div>
-    <button class="link" id="add" type="button">+ add agent</button>
-
-    <div class="row" style="margin-top:14px">
-      <div class="field" style="flex:0 0 170px">
+    <button class="linkbtn" id="add" type="button">+ add agent</button>
+    <div class="row" style="margin-top:12px">
+      <div class="field" style="flex:0 0 150px">
         <label for="mode">Judged by</label>
-        <select id="mode">
-          <option value="llm">An LLM</option>
-          <option value="human">Me</option>
-        </select>
+        <select id="mode"><option value="llm">An LLM</option><option value="human">Me</option></select>
       </div>
-      <div class="field grow" id="judge-model-field">
-        <label for="judge">Judge model</label>
-        <input id="judge" value="gemini/gemini-flash-lite-latest" />
-      </div>
+      <div class="field" id="judge-field"><label for="judge">Judge model</label><input id="judge" value="gemini/gemini-flash-lite-latest" /></div>
     </div>
-
-    <div style="display:flex;align-items:center;margin-top:6px">
-      <button id="run" type="button">Run debate</button>
-      <span class="status" id="status"></span>
+    <p class="note">Needs API keys in <code>.env</code> for whichever provider the models point at. Ollama models run locally.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="ghost" id="sheet-close" type="button">Close</button>
+      <button id="sheet-run" type="button">Run debate</button>
     </div>
-    <p class="hint">Needs API keys in <code>.env</code> for whichever provider the models point at. Ollama models run locally.</p>
-  </div>
-
-  <div id="transcript"></div>
-
-  <div class="panel" id="results" hidden>
-    <h2 style="font-size:16px;margin:0 0 4px">Final standings</h2>
-    <p class="sub" style="margin-bottom:14px">Names are revealed only now the debate is over.</p>
-    <table><thead><tr><th>Agent</th><th>Rounds won</th></tr></thead><tbody id="standings"></tbody></table>
   </div>
 </div>
 
@@ -141,189 +226,365 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var agentsEl = $("agents"), transcript = $("transcript"), statusEl = $("status");
-  var source = null, awaitingRound = null;
+  var SVGNS = "http://www.w3.org/2000/svg";
 
-  var DEFAULT_MODEL = "gemini/gemini-flash-lite-latest";
+  var live = true;               // server-backed, until proven otherwise
+  var source = null, awaitingRound = null, agentCount = 3, replayTimer = null;
 
-  function addAgent(name, model) {
-    var row = document.createElement("div");
-    row.className = "agent";
-    var n = document.createElement("input");
-    n.placeholder = "name"; n.value = name || ("agent_" + String.fromCharCode(97 + agentsEl.children.length));
-    var m = document.createElement("input");
-    m.placeholder = "litellm model string"; m.value = model || DEFAULT_MODEL;
-    var x = document.createElement("button");
-    x.type = "button"; x.className = "link"; x.textContent = "remove";
-    x.onclick = function () {
-      if (agentsEl.children.length > 2) row.remove();
-      else say("A debate needs at least two agents.", true);
-    };
-    row.append(n, m, x);
-    agentsEl.appendChild(row);
+  /* ============================ diagram ============================ */
+  var D = { slots: [], judge: null, feedback: null };
+
+  function el(name, attrs, text) {
+    var n = document.createElementNS(SVGNS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
   }
 
-  function readAgents() {
-    return [].map.call(agentsEl.children, function (row) {
-      var i = row.querySelectorAll("input");
-      return { name: i[0].value.trim(), model: i[1].value.trim() };
-    }).filter(function (a) { return a.name && a.model; });
-  }
+  /* Rebuilt whenever the agent count changes. Laid out as a vertical
+     pipeline because the pane it lives in is tall and narrow: agents at the
+     top, the anonymiser band beneath them, the judge below that, and the
+     winner looping back up as the next round's context. */
+  function buildDiagram(n) {
+    var svg = $("diagram");
+    svg.innerHTML = "";
+    D.slots = [];
 
-  function say(msg, isErr) {
-    statusEl.textContent = msg;
-    statusEl.className = "status" + (isErr ? " err" : "");
-  }
+    var W = 520, agentY = 78, chipY = 176, jTop = 300, jH = 116, jX = 130, jW = 260;
+    var span = Math.min(150, (W - 120) / Math.max(n, 1));
+    var startX = W / 2 - span * (n - 1) / 2;
+    var chipW = Math.min(118, span - 12);
 
-  $("add").onclick = function () { addAgent(); };
-  $("mode").onchange = function () {
-    $("judge-model-field").hidden = this.value === "human";
-  };
+    svg.appendChild(el("text", { x: 24, y: 34, class: "zone-t" }, "agents"));
 
-  /* Prefill from a config passed on the command line, if there was one. */
-  fetch("/api/preset").then(function (r) { return r.json(); }).then(function (p) {
-    if (p && p.topic) {
-      $("topic").value = p.topic;
-      $("rounds").value = p.rounds;
-      $("maxtok").value = p.max_tokens;
-      agentsEl.innerHTML = "";
-      p.agents.forEach(function (a) { addAgent(a.name, a.model); });
-      $("mode").value = p.orchestrator.mode;
-      if (p.orchestrator.model) $("judge").value = p.orchestrator.model;
-      $("mode").onchange.call($("mode"));
+    // anonymiser band behind the code row
+    svg.appendChild(el("rect", { x: 22, y: chipY - 42, width: W - 44, height: 84, rx: 12, class: "zone" }));
+    svg.appendChild(el("text", { x: 34, y: chipY - 24, class: "zone-t" }, "anonymiser \u00b7 fresh code every round"));
+
+    for (var i = 0; i < n; i++) {
+      var x = startX + i * span;
+
+      var g = el("g", { class: "g-agent" });
+      g.appendChild(el("circle", { cx: x, cy: agentY, r: 19, class: "nd-box" }));
+      g.appendChild(el("text", { x: x, y: agentY + 6, class: "nd-label", "text-anchor": "middle" }, String(i + 1)));
+      var pulse = el("circle", { cx: x, cy: agentY, r: 26, fill: "none", stroke: "var(--accent)",
+        "stroke-width": 1.5, class: "dotpulse" });
+      pulse.appendChild(el("animate", { attributeName: "r", values: "20;31;20", dur: "1.4s", repeatCount: "indefinite" }));
+      pulse.appendChild(el("animate", { attributeName: "opacity", values: "0.9;0;0.9", dur: "1.4s", repeatCount: "indefinite" }));
+      g.appendChild(pulse);
+      svg.appendChild(g);
+
+      var sl = el("g", { class: "g-slot" });
+      // agent -> its code for this round
+      sl.appendChild(el("line", { x1: x, y1: agentY + 21, x2: x, y2: chipY - 16, class: "wire" }));
+      sl.appendChild(el("rect", { x: x - chipW / 2, y: chipY - 16, width: chipW, height: 32, rx: 16, class: "chip" }));
+      var t = el("text", { x: x, y: chipY + 5, class: "chip-t", "text-anchor": "middle" }, "\u2014");
+      sl.appendChild(t);
+      // code -> judge, converging on the top edge of the box
+      sl.appendChild(el("path", { d: "M " + x + " " + (chipY + 18) +
+        " C " + x + " " + (chipY + 70) + ", " + (W / 2) + " " + (jTop - 60) + ", " + (W / 2) + " " + jTop,
+        class: "wire" }));
+      svg.appendChild(sl);
+      D.slots.push({ g: sl, text: t, agent: g, x: x });
     }
-  }).catch(function () {});
 
-  if (!agentsEl.children.length) { addAgent(); addAgent(); addAgent(); }
+    var j = el("g", { class: "judge" });
+    j.appendChild(el("rect", { x: jX, y: jTop, width: jW, height: jH, rx: 14, class: "nd-box" }));
+    j.appendChild(el("text", { x: W / 2, y: jTop + 42, class: "nd-label", "text-anchor": "middle" }, "Orchestrator"));
+    j.appendChild(el("text", { x: W / 2, y: jTop + 64, class: "nd-sub", "text-anchor": "middle" }, "sees codes, never names"));
+    j.appendChild(el("text", { x: W / 2, y: jTop + 88, class: "nd-sub", "text-anchor": "middle", id: "judge-pick" }, ""));
+    svg.appendChild(j);
+    D.judge = j;
 
-  function roundBlock(n) {
-    var id = "round-" + n;
-    if ($(id)) return $(id);
-    var head = document.createElement("div");
-    head.className = "round-head";
-    head.innerHTML = '<h2>Round ' + n + '</h2><span class="note" id="note-' + n + '">agents are answering…</span>';
-    var cards = document.createElement("div");
-    cards.className = "cards"; cards.id = id;
-    transcript.append(head, cards);
-    return cards;
+    // winner loops back up the left edge into the agents
+    var fb = el("g", { class: "feedback" });
+    var fy = jTop + jH + 56, rx = W - 30;
+    // Down the right edge rather than the left, which the anonymiser label
+    // already occupies.
+    fb.appendChild(el("path", { d: "M " + (W / 2) + " " + (jTop + jH) + " V " + fy +
+      " H " + rx + " V " + agentY + " H " + (startX + (n - 1) * span + 26) }));
+    fb.appendChild(el("text", { x: W / 2 - 40, y: fy - 10, "text-anchor": "middle" },
+      "winner carries forward as shared context"));
+    svg.appendChild(fb);
+    D.feedback = fb;
+
+    svg.setAttribute("viewBox", "0 0 " + W + " " + (fy + 30));
   }
+
+  function resetSlots() {
+    var pk = $("judge-pick");
+    if (pk) pk.textContent = "";
+    D.slots.forEach(function (s) {
+      s.g.classList.remove("coded", "won");
+      s.text.textContent = "—";
+      s.agent.classList.remove("thinking");
+    });
+    D.judge.classList.remove("active", "decided");
+    D.feedback.classList.remove("on");
+  }
+
+  function stage(text) { $("stage-sub").textContent = text; }
+
+  /* ============================ transcript ============================ */
+  function roundBlock(n, total) {
+    var id = "r" + n;
+    if ($(id)) return $(id);
+    var feed = $("feed");
+    if (feed.querySelector(".empty")) feed.innerHTML = "";
+    var tag = document.createElement("div");
+    tag.className = "round-tag";
+    tag.innerHTML = "<span>Round " + n + (total ? " of " + total : "") + "</span><span class='n' id='rn" + n + "'>agents are answering…</span>";
+    var box = document.createElement("div");
+    box.id = id;
+    feed.append(tag, box);
+    return box;
+  }
+
+  function scrollFeed() { var f = $("feed"); f.scrollTop = f.scrollHeight; }
+
+  /* ============================ events ============================ */
+  var totalRounds = 0, roster = [];
 
   function handle(ev) {
     if (ev.type === "start") {
-      transcript.innerHTML = "";
-      $("results").hidden = true;
-      say("running · " + ev.agents.length + " agents · " + ev.rounds + " rounds");
+      totalRounds = ev.rounds;
+      agentCount = ev.agents.length;
+      roster = ev.agents.slice();
+      buildDiagram(agentCount);
+      $("feed").innerHTML = "";
+      $("standings").innerHTML = "<span class='locked'>Hidden until the debate ends — the judge never sees them either.</span>";
+      $("topic-line").textContent = ev.topic;
+      say(ev.agents.length + " agents · " + ev.rounds + " rounds · judged by " + (ev.mode === "llm" ? "an LLM" : "you"));
+      stage("starting");
     }
-    else if (ev.type === "round_start") { roundBlock(ev.round); }
+    else if (ev.type === "round_start") {
+      resetSlots();
+      roundBlock(ev.round, totalRounds);
+      stage("round " + ev.round + " — agents answering");
+      D.slots.forEach(function (s) { s.agent.classList.add("thinking"); });
+      scrollFeed();
+    }
     else if (ev.type === "agent_done") {
-      var note = $("note-" + ev.round);
-      if (note) note.textContent = "answering… " + ev.done + " of " + ev.total;
+      var s = D.slots[ev.done - 1];
+      if (s) s.agent.classList.remove("thinking");
+      var n = $("rn" + ev.round);
+      if (n) n.textContent = "answered " + ev.done + " of " + ev.total;
+      stage("round " + ev.round + " — " + ev.done + "/" + ev.total + " answered");
     }
     else if (ev.type === "responses") {
-      var box = roundBlock(ev.round);
-      box.innerHTML = "";
-      Object.keys(ev.responses).forEach(function (code) {
-        var c = document.createElement("div");
-        c.className = "card"; c.dataset.code = code; c.dataset.round = ev.round;
-        c.innerHTML = '<div class="card-top"><span class="code"></span></div><p></p>';
-        c.querySelector(".code").textContent = code;
-        c.querySelector("p").textContent = ev.responses[code];
-        box.appendChild(c);
+      D.slots.forEach(function (s) { s.agent.classList.remove("thinking"); });
+      var codes = Object.keys(ev.responses);
+      codes.forEach(function (code, i) {
+        var s = D.slots[i];
+        if (!s) return;
+        s.text.textContent = code;
+        s.g.classList.add("coded");
       });
-      var note = $("note-" + ev.round);
-      if (note) note.textContent = "judging…";
+      D.judge.classList.add("active");
+      stage("round " + ev.round + " — judging");
+
+      var box = roundBlock(ev.round, totalRounds);
+      box.innerHTML = "";
+      codes.forEach(function (code) {
+        var d = document.createElement("div");
+        d.className = "arg"; d.dataset.code = code;
+        d.innerHTML = "<div class='arg-top'><span class='arg-code'></span></div><p></p>";
+        d.querySelector(".arg-code").textContent = code;
+        d.querySelector("p").textContent = ev.responses[code];
+        box.appendChild(d);
+      });
+      var n2 = $("rn" + ev.round);
+      if (n2) n2.textContent = "judging…";
+      scrollFeed();
     }
     else if (ev.type === "awaiting") {
       awaitingRound = ev.round;
-      var note = $("note-" + ev.round);
-      if (note) note.textContent = "your turn — click the argument that wins";
-      [].forEach.call(document.querySelectorAll('#round-' + ev.round + ' .card'), function (c) {
-        c.classList.add("pickable");
-        c.onclick = function () { pick(c.dataset.code, ev.round); };
+      stage("round " + ev.round + " — your call");
+      var n3 = $("rn" + ev.round);
+      if (n3) n3.textContent = "click the argument that wins";
+      [].forEach.call(document.querySelectorAll("#r" + ev.round + " .arg"), function (d) {
+        d.classList.add("pickable");
+        d.onclick = function () { pick(d.dataset.code, ev.round); };
       });
     }
     else if (ev.type === "winner") {
-      var card = document.querySelector('#round-' + ev.round + ' .card[data-code="' + ev.code + '"]');
+      D.slots.forEach(function (s) {
+        if (s.text.textContent === ev.code) s.g.classList.add("won");
+      });
+      D.judge.classList.remove("active");
+      D.judge.classList.add("decided");
+      var pk = $("judge-pick");
+      if (pk) pk.textContent = "picked " + ev.code;
+      D.feedback.classList.add("on");
+      stage("round " + ev.round + " — " + ev.code + " wins");
+
+      var card = document.querySelector("#r" + ev.round + " .arg[data-code='" + ev.code + "']");
       if (card) {
         card.classList.add("won");
-        card.querySelector(".card-top").insertAdjacentHTML("beforeend", '<span class="tag">winner</span>');
+        card.querySelector(".arg-top").insertAdjacentHTML("beforeend", "<span class='arg-win'>winner</span>");
       }
-      [].forEach.call(document.querySelectorAll('#round-' + ev.round + ' .card'), function (c) {
-        c.classList.remove("pickable"); c.onclick = null;
+      [].forEach.call(document.querySelectorAll("#r" + ev.round + " .arg"), function (d) {
+        d.classList.remove("pickable"); d.onclick = null;
       });
-      var note = $("note-" + ev.round);
-      if (note) note.textContent = "winner carries forward as the next round's context";
+      var n4 = $("rn" + ev.round);
+      if (n4) n4.textContent = ev.code + " carries forward";
+      scrollFeed();
     }
     else if (ev.type === "done") {
-      var body = $("standings");
-      body.innerHTML = "";
-      Object.keys(ev.stats).sort(function (a, b) { return ev.stats[b] - ev.stats[a]; })
-        .forEach(function (name) {
-          var tr = document.createElement("tr");
-          var td1 = document.createElement("td"); td1.textContent = name;
-          var td2 = document.createElement("td"); td2.className = "n"; td2.textContent = ev.stats[name];
-          tr.append(td1, td2); body.appendChild(tr);
-        });
-      $("results").hidden = false;
-      say("done");
+      /* Counter only holds agents that won at least once; fold in the rest
+         at zero so the whole field is shown. */
+      var tally = {};
+      roster.forEach(function (nm) { tally[nm] = 0; });
+      Object.keys(ev.stats).forEach(function (nm) { tally[nm] = ev.stats[nm]; });
+      var names = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a]; });
+      ev.stats = tally;
+      var best = names.length ? ev.stats[names[0]] : 0;
+      $("standings").innerHTML = names.map(function (nm) {
+        return "<span class='stand" + (ev.stats[nm] === best ? " lead" : "") + "'>" +
+               "<span class='nm'></span><span class='ct'></span></span>";
+      }).join("");
+      [].forEach.call($("standings").children, function (node, i) {
+        node.querySelector(".nm").textContent = names[i];
+        node.querySelector(".ct").textContent = ev.stats[names[i]];
+      });
+      $("feed-sub").textContent = "names revealed — the debate is over";
+      stage("done");
+      say("finished");
+      $("run").disabled = false;
     }
-    else if (ev.type === "error") { say(ev.message, true); }
+    else if (ev.type === "error") { say(ev.message, true); stage("error"); $("run").disabled = false; }
+  }
+
+  function say(msg, isErr) {
+    $("status").textContent = msg || "";
+    $("status").className = "status" + (isErr ? " err" : "");
   }
 
   function pick(code, round) {
     if (awaitingRound !== round) return;
     awaitingRound = null;
-    fetch("/api/pick", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code })
-    });
+    fetch("/api/pick", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code }) });
   }
 
-  $("run").onclick = function () {
+  /* ============================ setup sheet ============================ */
+  function addAgent(name, model) {
+    var wrap = $("agents");
+    var row = document.createElement("div");
+    row.className = "agent-row";
+    var a = document.createElement("input");
+    a.placeholder = "name";
+    a.value = name || ("agent_" + String.fromCharCode(97 + wrap.children.length));
+    var b = document.createElement("input");
+    b.placeholder = "litellm model string";
+    b.value = model || "gemini/gemini-flash-lite-latest";
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "linkbtn"; x.textContent = "remove";
+    x.onclick = function () { if (wrap.children.length > 2) row.remove(); };
+    row.append(a, b, x);
+    wrap.appendChild(row);
+  }
+  function readAgents() {
+    return [].map.call($("agents").children, function (r) {
+      var i = r.querySelectorAll("input");
+      return { name: i[0].value.trim(), model: i[1].value.trim() };
+    }).filter(function (a) { return a.name && a.model; });
+  }
+
+  $("add").onclick = function () { addAgent(); };
+  $("mode").onchange = function () { $("judge-field").hidden = this.value === "human"; };
+  $("setup-btn").onclick = function () { $("sheet").hidden = false; };
+  $("sheet-close").onclick = function () { $("sheet").hidden = true; };
+  $("sheet-run").onclick = function () { $("sheet").hidden = true; start(); };
+  $("run").onclick = function () { start(); };
+
+  /* ============================ running ============================ */
+  function start() {
+    if (!live) { playReplay(); return; }
     var agents = readAgents();
-    if (agents.length < 2) { say("A debate needs at least two agents.", true); return; }
+    if (agents.length < 2) { say("needs at least two agents", true); $("sheet").hidden = false; return; }
 
     var body = {
-      topic: $("topic").value.trim(),
-      rounds: +$("rounds").value,
-      max_tokens: +$("maxtok").value,
+      topic: $("topic").value.trim(), rounds: +$("rounds").value, max_tokens: +$("maxtok").value,
       agents: agents,
       orchestrator: $("mode").value === "llm"
-        ? { mode: "llm", model: $("judge").value.trim() }
-        : { mode: "human" }
+        ? { mode: "llm", model: $("judge").value.trim() } : { mode: "human" }
     };
 
     $("run").disabled = true;
-    say("starting…");
-    transcript.innerHTML = "";
-    $("results").hidden = true;
+    say("starting…"); stage("connecting");
 
-    /* Open the stream first so no early event is missed. */
     if (source) source.close();
     source = new EventSource("/api/events");
     source.onmessage = function (m) { handle(JSON.parse(m.data)); };
-    source.addEventListener("end", function () {
-      source.close(); source = null; $("run").disabled = false;
-    });
-    source.onerror = function () {
-      if (source && source.readyState === 2) { $("run").disabled = false; }
-    };
+    source.addEventListener("end", function () { source.close(); source = null; $("run").disabled = false; });
 
-    fetch("/api/run", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) {
-          say(res.j.error || "could not start", true);
-          $("run").disabled = false;
+          say(res.j.error || "could not start", true); $("run").disabled = false;
           if (source) { source.close(); source = null; }
         }
       })
-      .catch(function (e) {
-        say(String(e), true); $("run").disabled = false;
-      });
-  };
+      .catch(function (e) { say(String(e), true); $("run").disabled = false; });
+  }
+
+  /* ============================ replay ============================ */
+  /* A recorded run, replayed entirely in the page. This is what a static
+     deploy serves: no server, no keys, nothing to spend. */
+  var REPLAY = null;
+
+  function playReplay() {
+    if (!REPLAY) return;
+    clearTimeout(replayTimer);
+    $("run").disabled = true;
+    var i = 0;
+    (function step() {
+      if (i >= REPLAY.length) { $("run").disabled = false; return; }
+      var item = REPLAY[i++];
+      handle(item.ev);
+      replayTimer = setTimeout(step, item.wait);
+    })();
+  }
+
+  /* ============================ boot ============================ */
+  addAgent(); addAgent(); addAgent();
+
+  fetch("/api/preset")
+    .then(function (r) { if (!r.ok) throw new Error("no server"); return r.json(); })
+    .then(function (p) {
+      live = true;
+      if (p && p.topic) {
+        $("topic").value = p.topic; $("rounds").value = p.rounds; $("maxtok").value = p.max_tokens;
+        $("agents").innerHTML = "";
+        p.agents.forEach(function (a) { addAgent(a.name, a.model); });
+        $("mode").value = p.orchestrator.mode;
+        if (p.orchestrator.model) $("judge").value = p.orchestrator.model;
+        $("mode").onchange.call($("mode"));
+      }
+      buildDiagram(readAgents().length || 3);
+      say("ready");
+    })
+    .catch(function () {
+      /* No backend: this is the static build. Load the recorded run. */
+      live = false;
+      $("mode-badge").hidden = false;
+      $("setup-btn").hidden = true;
+      $("run").textContent = "Play recorded debate";
+      say("no backend here — this is a recording");
+      fetch("replay.json")
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          REPLAY = j;
+          buildDiagram(3);
+          var s = j.find(function (x) { return x.ev.type === "start"; });
+          if (s) $("topic-line").textContent = s.ev.topic;
+          say("ready — press play");
+        })
+        .catch(function () { say("replay.json is missing", true); });
+    });
 })();
 </script>
 </body>
